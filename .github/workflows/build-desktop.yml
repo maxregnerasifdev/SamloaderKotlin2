@@ -1,4 +1,4 @@
-name: Desktop Build
+#name: Desktop Build
 
 on:
   release:
@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest  # Change to Windows environment
+    runs-on: windows-latest
 
     steps:
       - name: Checkout
@@ -30,14 +30,10 @@ jobs:
           myToken: ${{ secrets.GITHUB_TOKEN }}
           view_top: 1
 
-      - name: Grant execute permission for gradlew (if needed)
-        run: |
-          # Windows does not require chmod +x, so this step may not be necessary
-
       - name: Build with Gradle
         id: gradle-build
         run: |
-          ./gradlew :desktop:build  # Adjust if necessary based on Windows path conventions
+          ./gradlew :desktop:build
           ./gradlew --stop
 
       - name: Upload Release Files
@@ -48,4 +44,14 @@ jobs:
           allowUpdates: true
           replacesArtifacts: false
           omitBodyDuringUpdate: true
-          tag: ${{ steps.release.outputs.tag_name }}
+          generateReleaseNotes: false
+          makeLatest: legacy
+          omitBody: false
+          omitDraftDuringUpdate: false
+          omitName: false
+          omitNameDuringUpdate: false
+          omitPrereleaseDuringUpdate: false
+          removeArtifacts: false
+          skipIfReleaseExists: false
+          updateOnlyUnreleased: false
+          tag: ${{ github.ref }}  # Use github.ref instead of steps.release.outputs.tag_name
