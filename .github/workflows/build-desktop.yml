@@ -1,4 +1,4 @@
-#name: Desktop Build
+name: Desktop Build
 
 on:
   release:
@@ -36,22 +36,24 @@ jobs:
           ./gradlew :desktop:build
           ./gradlew --stop
 
+      - name: Create Release
+        id: create-release
+        run: |
+          tag_name=$(git describe --tags --abbrev=0)  # Get the latest tag name
+          echo "Creating release for tag: $tag_name"
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"tag_name\": \"$tag_name\", \"name\": \"$tag_name\", \"body\": \"Release $tag_name\", \"draft\": false, \"prerelease\": false}" \
+            "https://api.github.com/repos/${{ github.repository }}/releases"
+
       - name: Upload Release Files
         uses: ncipollo/release-action@v1
         with:
-          artifacts: 'output/*'  # Adjust this path based on your actual build output
+          artifacts: 'output/*'
           token: ${{ secrets.GITHUB_TOKEN }}
           allowUpdates: true
           replacesArtifacts: false
           omitBodyDuringUpdate: true
-          generateReleaseNotes: false
-          makeLatest: legacy
-          omitBody: false
-          omitDraftDuringUpdate: false
-          omitName: false
-          omitNameDuringUpdate: false
-          omitPrereleaseDuringUpdate: false
-          removeArtifacts: false
-          skipIfReleaseExists: false
-          updateOnlyUnreleased: false
-          tag: ${{ github.ref }}  # Use github.ref instead of steps.release.outputs.tag_name
+          tag: ${{ github.ref }}
+
