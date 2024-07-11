@@ -48,13 +48,14 @@ import kotlin.time.ExperimentalTime
 @OptIn(ExperimentalComposeUiApi::class)
 @ExperimentalTime
 fun main() {
+    // Initialize Bugsnag for error tracking
     BugsnagUtils.create()
 
+    // Create a factory for handling window exceptions
     val exceptionHandlerFactory = WindowExceptionHandlerFactory { window ->
         WindowExceptionHandler { throwable ->
             SwingUtilities.invokeLater {
-                // if there was an error during window init, we can't use it as a parent,
-                // otherwise we will have two exceptions in the log
+                // Show error dialog and handle window close on error
                 showErrorDialog(window.takeIf { it.isDisplayable }, throwable)
                 window.dispatchEvent(WindowEvent(window, WindowEvent.WINDOW_CLOSING))
 
@@ -65,27 +66,24 @@ fun main() {
         }
     }
 
+    // Set system properties for Mac OS specific settings
     System.setProperty("apple.laf.useScreenMenuBar", "true")
     System.setProperty("apple.awt.application.appearance", "system")
     System.setProperty("apple.awt.application.name", GradleConfig.appName)
 
+    // Initialize event delegation
     EventDelegate.create()
 
-    application(
-        exitProcessOnExit = false,
-    ) {
-        CompositionLocalProvider(
-            LocalWindowExceptionHandlerFactory provides exceptionHandlerFactory,
-        ) {
+    // Start the Compose application
+    application(exitProcessOnExit = false) {
+        CompositionLocalProvider(LocalWindowExceptionHandlerFactory provides exceptionHandlerFactory) {
             val mainWindowState = rememberWindowState()
             val themeInfo = rememberThemeInfo()
             val density = LocalDensity.current
             val useMicaEffect by BifrostSettings.Keys.useMicaEffect.collectAsMutableState()
 
-            val captionColor =
-                if (useMicaEffect) Color.Unspecified else themeInfo.colors.onBackground
-            val titleBarColor =
-                if (useMicaEffect) Color.Unspecified else themeInfo.colors.background
+            val captionColor = if (useMicaEffect) Color.Unspecified else themeInfo.colors.onBackground
+            val titleBarColor = if (useMicaEffect) Color.Unspecified else themeInfo.colors.background
 
             val iconPainter = painterResource(MR.images.icon_rounded)
 
@@ -102,10 +100,10 @@ fun main() {
                 ),
                 onPreviewKeyEvent = keyCodeHandler(),
             ) {
-                // For some reason this returns the title bar height on macOS.
                 val menuBarHeight = remember(window.height) {
                     if (Platform.isMac) window.height.dp else 0.dp
                 }
+
                 LaunchedEffect(window) {
                     window.rootPane.putClientProperty("apple.awt.transparentTitleBar", true)
                     window.rootPane.putClientProperty("apple.awt.fullWindowContent", true)
@@ -114,18 +112,11 @@ fun main() {
                     FilePicker.init(window)
 
                     val map = mutableMapOf<String, String>()
-
                     themeInfo.colors.primary.toAwtColor().let {
-                        map.put(
-                            "@accentColor",
-                            String.format("#%06x", (it.rgb and 0xffffff)),
-                        )
+                        map["@accentColor"] = String.format("#%06x", (it.rgb and 0xffffff))
                     }
                     themeInfo.colors.background.toAwtColor().let {
-                        map.put(
-                            "@background",
-                            String.format("#%06x", (it.rgb and 0xffffff)),
-                        )
+                        map["@background"] = String.format("#%06x", (it.rgb and 0xffffff))
                     }
 
                     FlatLaf.setGlobalExtraDefaults(map)
@@ -133,7 +124,6 @@ fun main() {
                 }
 
                 LaunchedEffect(density) {
-                    // Set this after getting the original height.
                     window.minimumSize = with(density) {
                         Dimension(200.dp.roundToPx(), 200.dp.roundToPx())
                     }
@@ -161,9 +151,7 @@ fun main() {
                     applicationScope = this@application,
                 )
 
-                CompositionLocalProvider(
-                    LocalMenuBarHeight provides menuBarHeight,
-                ) {
+                CompositionLocalProvider(LocalMenuBarHeight provides menuBarHeight) {
                     MainView()
                 }
             }
@@ -173,11 +161,11 @@ fun main() {
     exitProcess(0)
 }
 
+// Function to show an error dialog
 private fun showErrorDialog(parentComponent: Window?, throwable: Throwable) {
     val title = "Error"
     val message = throwable.message ?: "Unknown error"
-    val pane = object : JOptionPane(message, ERROR_MESSAGE) {
-        // Limit width for long messages
+    val pane = object : JOptionPane(message, JOptionPane.ERROR_MESSAGE) {
         override fun getMaxCharactersPerLineCount(): Int = 120
     }
     val dialog = pane.createDialog(parentComponent, title)
