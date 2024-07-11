@@ -11,7 +11,8 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: windows-latest  # Change to Windows environment
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,39 +30,20 @@ jobs:
           myToken: ${{ secrets.GITHUB_TOKEN }}
           view_top: 1
 
-      - name: Retrieve macOS Certificate
-        env:
-          CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_CONVEYOR }}
+      - name: Grant execute permission for gradlew (if needed)
         run: |
-          echo $CERTIFICATE_BASE64 | base64 --decode > macos.cer
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-#      - name: Cache Gradle and Build
-#        uses: actions/cache@v4
-#        with:
-#          path: |
-#            ~/.gradle/caches
-#            ~/.gradle/wrapper
-#            ${{ github.workspace }}/common/build
-#            ${{ github.workspace }}/desktop/build
-#            ~/Library/Caches/Hydraulic/Conveyor
-#          key: ${{ runner.os }}-gradle-desktop
-#          restore-keys: |
-#            ${{ runner.os }}-gradle-desktop
+          # Windows does not require chmod +x, so this step may not be necessary
 
       - name: Build with Gradle
         id: gradle-build
         run: |
-          ./gradlew :desktop:build
+          ./gradlew :desktop:build  # Adjust if necessary based on Windows path conventions
           ./gradlew --stop
 
-      
       - name: Upload Release Files
         uses: ncipollo/release-action@v1
         with:
-          artifacts: 'output/*'
+          artifacts: 'output/*'  # Adjust this path based on your actual build output
           token: ${{ secrets.GITHUB_TOKEN }}
           allowUpdates: true
           replacesArtifacts: false
